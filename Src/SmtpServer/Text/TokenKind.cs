@@ -1,5 +1,8 @@
 ﻿namespace SmtpServer.Text
 {
+    /// <summary>
+    /// Token Kind
+    /// </summary>
     public enum TokenKind
     {
         /// <summary>
@@ -48,12 +51,12 @@
         Colon,
 
         /// <summary>
-        /// >
+        /// &gt; Greater-than sign
         /// </summary>
         GreaterThan,
 
         /// <summary>
-        /// <
+        /// &lt; Less-than sign
         /// </summary>
         LessThan = 10,
 

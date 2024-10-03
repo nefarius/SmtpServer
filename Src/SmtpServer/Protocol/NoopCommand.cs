@@ -4,8 +4,14 @@ using SmtpServer.IO;
 
 namespace SmtpServer.Protocol
 {
+    /// <summary>
+    /// Noop Command
+    /// </summary>
     public sealed class NoopCommand : SmtpCommand
     {
+        /// <summary>
+        /// Smtp Noop Command
+        /// </summary>
         public const string Command = "NOOP";
 
         /// <summary>

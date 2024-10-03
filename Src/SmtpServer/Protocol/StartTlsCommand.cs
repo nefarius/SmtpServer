@@ -4,8 +4,14 @@ using SmtpServer.IO;
 
 namespace SmtpServer.Protocol
 {
+    /// <summary>
+    /// Start Tls Command
+    /// </summary>
     public sealed class StartTlsCommand : SmtpCommand
     {
+        /// <summary>
+        /// Smtp Start Tls Command
+        /// </summary>
         public const string Command = "STARTTLS";
 
         /// <summary>

@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace SmtpServer.IO
 {
+    /// <summary>
+    /// Securable Duplex Pipe Interface
+    /// </summary>
     public interface ISecurableDuplexPipe : IDuplexPipe, IDisposable
     {
         /// <summary>
@@ -22,5 +25,10 @@ namespace SmtpServer.IO
         /// Returns a value indicating whether or not the current pipeline is secure.
         /// </summary>
         bool IsSecure { get; }
+
+        /// <summary>
+        /// Returns the used SslProtocol of a secure pipeline
+        /// </summary>
+        SslProtocols SslProtocol { get; }
     }
 }

@@ -1,4 +1,4 @@
-name: Build and Publish
+name: Build and Test
 
 on:
   workflow_dispatch: # Allow running the workflow manually from the GitHub UI
@@ -7,6 +7,10 @@ on:
     - 'Src/**'
     - '.github/workflows/**'
     branches: [ master ]
+  pull_request:
+    paths:
+    - 'Src/**'
+    - '.github/workflows/**'
 
 jobs:
   build:
@@ -15,7 +19,7 @@ jobs:
 
     permissions:
       contents: read
-      packages: write
+      #packages: write
 
     steps:
     - uses: actions/checkout@v4
@@ -33,9 +37,3 @@ jobs:
       working-directory: ./Src
       run: |
         dotnet test --configuration Release --no-restore --no-build --verbosity normal
-    #- name: Create NuGet packages
-    #  run: |
-    #    dotnet pack --configuration Release --output $GITHUB_WORKSPACE/out Src/SmtpServer/SmtpServer.csproj
-    #- name: Push NuGet packages
-    #  run: |
-    #    dotnet nuget push $GITHUB_WORKSPACE/out/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{secrets.NUGET_TOKEN}} --skip-duplicate --no-symbols

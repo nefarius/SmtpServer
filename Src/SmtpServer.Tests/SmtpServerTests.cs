@@ -7,8 +7,11 @@ using SmtpServer.Protocol;
 using SmtpServer.Storage;
 using SmtpServer.Tests.Mocks;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -160,6 +163,79 @@ namespace SmtpServer.Tests
         }
 
         [Fact]
+        public async Task WillSessionTimeoutDuringMailDataTransmission()
+        {
+            var sessionTimeout = TimeSpan.FromSeconds(5);
+            var commandWaitTimeout = TimeSpan.FromSeconds(1);
+
+            using var disposable = CreateServer(
+                serverOptions => serverOptions.CommandWaitTimeout(commandWaitTimeout),
+                endpointDefinition => endpointDefinition.SessionTimeout(sessionTimeout));
+
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            using var rawSmtpClient = new RawSmtpClient("127.0.0.1", 9025);
+            await rawSmtpClient.ConnectAsync();
+
+            var response = await rawSmtpClient.SendCommandAsync("helo test");
+            if (!response.StartsWith("250"))
+            {
+                Assert.Fail("helo command not successful");
+            }
+
+            response = await rawSmtpClient.SendCommandAsync("mail from:<sender@test.com>");
+            if (!response.StartsWith("250"))
+            {
+                Assert.Fail("mail from command not successful");
+            }
+
+            response = await rawSmtpClient.SendCommandAsync("rcpt to:<recipient@test.com>");
+            if (!response.StartsWith("250"))
+            {
+                Assert.Fail("rcpt to command not successful");
+            }
+
+            response = await rawSmtpClient.SendCommandAsync("data");
+            if (!response.StartsWith("354"))
+            {
+                Assert.Fail("data command not successful");
+            }
+
+            string smtpResponse = null;
+
+            _ = Task.Run (async() =>
+            {
+                smtpResponse = await rawSmtpClient.WaitForDataAsync();
+            });
+
+            var isSessionCancelled = false;
+
+            try
+            {
+                for (var i = 0; i < 1000; i++)
+                {
+                    await rawSmtpClient.SendDataAsync("some text part ");
+                    await Task.Delay(100);
+                }
+            }
+            catch (IOException)
+            {
+                isSessionCancelled = true;
+                stopwatch.Stop();
+            }
+            catch (Exception exception)
+            {
+                Assert.Fail($"Wrong exception type {exception.GetType()}");
+            }
+
+            Assert.True(isSessionCancelled, "Smtp session is not cancelled");
+            Assert.Equal("554 \r\n221 The session has be cancelled.\r\n", smtpResponse);
+
+            Assert.True(stopwatch.Elapsed > sessionTimeout, "SessionTimeout not reached");
+        }
+
+        [Fact]
         public void CanReturnSmtpResponseException_DoesNotQuit()
         {
             // arrange
@@ -291,6 +367,76 @@ namespace SmtpServer.Tests
             disposable.Server.SessionCreated -= sessionCreatedHandler;
 
             Assert.True(isSecure);
+        }
+
+        public static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            return true;
+        }
+
+        [Fact]
+        public async Task SessionTimeoutIsExceeded_DelayedAuthenticate()
+        {
+            var sessionTimeout = TimeSpan.FromSeconds(3);
+            var server = "localhost";
+            var port = 9025;
+
+            using var disposable = CreateServer(endpoint => endpoint
+                .SessionTimeout(sessionTimeout)
+                .IsSecure(true)
+                .Certificate(CreateCertificate())
+            );
+
+            using var tcpClient = new TcpClient(server, port);
+            using var sslStream = new SslStream(tcpClient.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
+
+            await Task.Delay(sessionTimeout.Add(TimeSpan.FromSeconds(1)));
+
+            var exception = await Assert.ThrowsAsync<IOException>(async () =>
+            {
+                await sslStream.AuthenticateAsClientAsync(server);
+            });
+        }
+
+        [Fact]
+        public async Task SessionTimeoutIsExceeded_NoCommands()
+        {
+            var sessionTimeout = TimeSpan.FromSeconds(3);
+            var server = "localhost";
+            var port = 9025;
+
+            using var disposable = CreateServer(endpoint => endpoint
+                                        .SessionTimeout(sessionTimeout)
+                                        .IsSecure(true)
+                                        .Certificate(CreateCertificate())
+                                   );
+
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            using var tcpClient = new TcpClient(server, port);
+            using var sslStream = new SslStream(tcpClient.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
+
+            await sslStream.AuthenticateAsClientAsync(server);
+
+            if (sslStream.IsAuthenticated)
+            {
+                var buffer = new byte[1024];
+
+                var welcomeByteCount = await sslStream.ReadAsync(buffer, 0, buffer.Length);
+
+                var emptyResponseCount = await sslStream.ReadAsync(buffer, 0, buffer.Length);
+
+                await Task.Delay(100); //Add a tolerance
+                stopwatch.Stop();
+
+                Assert.True(emptyResponseCount == 0, "Some data received");
+                Assert.True(stopwatch.Elapsed > sessionTimeout, $"SessionTimout not elapsed {stopwatch.Elapsed}");
+            }
+            else
+            {
+                Assert.Fail("Smtp Session is not authenticated");
+            }
         }
 
         [Fact]

@@ -6,24 +6,31 @@ using SmtpServer.IO;
 
 namespace SmtpServer.Net
 {
+    /// <summary>
+    /// Endpoint Listener
+    /// </summary>
     public sealed class EndpointListener : IEndpointListener
     {
+        /// <summary>
+        /// EndpointListener LocalEndPoint Key
+        /// </summary>
         public const string LocalEndPointKey = "EndpointListener:LocalEndPoint";
+
+        /// <summary>
+        /// EndpointListener RemoteEndPoint Key
+        /// </summary>
         public const string RemoteEndPointKey = "EndpointListener:RemoteEndPoint";
 
-        readonly IEndpointDefinition _endpointDefinition;
         readonly TcpListener _tcpListener;
         readonly Action _disposeAction;
 
         /// <summary>
         /// Constructor.
         /// </summary>
-        /// <param name="endpointDefinition">The endpoint definition to create the listener for.</param>
         /// <param name="tcpListener">The TCP listener for the endpoint.</param>
         /// <param name="disposeAction">The action to execute when the listener has been disposed.</param>
-        internal EndpointListener(IEndpointDefinition endpointDefinition, TcpListener tcpListener, Action disposeAction)
+        internal EndpointListener(TcpListener tcpListener, Action disposeAction)
         {
-            _endpointDefinition = endpointDefinition;
             _tcpListener = tcpListener;
             _disposeAction = disposeAction;
         }
@@ -43,12 +50,15 @@ namespace SmtpServer.Net
             context.Properties.Add(RemoteEndPointKey, tcpClient.Client.RemoteEndPoint);
 
             var stream = tcpClient.GetStream();
-            stream.ReadTimeout = (int)_endpointDefinition.ReadTimeout.TotalMilliseconds;
 
             return new SecurableDuplexPipe(stream, () =>
             {
-                tcpClient.Close();
-                tcpClient.Dispose();
+                try
+                {
+                    tcpClient.Close();
+                    tcpClient.Dispose();
+                }
+                catch { }
             });
         }
 

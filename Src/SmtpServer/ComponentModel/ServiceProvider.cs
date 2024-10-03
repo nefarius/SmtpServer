@@ -6,8 +6,14 @@ using SmtpServer.Net;
 
 namespace SmtpServer.ComponentModel
 {
+    /// <summary>
+    /// Service Provider
+    /// </summary>
     public sealed class ServiceProvider : IServiceProvider
     {
+        /// <summary>
+        /// Default Service Provider
+        /// </summary>
         public static readonly IServiceProvider Default = new ServiceProvider();
 
         IEndpointListenerFactory _endpointListenerFactory;
@@ -15,7 +21,10 @@ namespace SmtpServer.ComponentModel
         ISmtpCommandFactory _smtpCommandFactory;
         IMailboxFilterFactory _mailboxFilterFactory;
         IMessageStoreFactory _messageStoreFactory;
-        
+
+        /// <summary>
+        /// Service Provider
+        /// </summary>
         public ServiceProvider()
         {
             Add(UserAuthenticator.Default);

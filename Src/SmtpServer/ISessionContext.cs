@@ -4,8 +4,16 @@ using SmtpServer.IO;
 
 namespace SmtpServer
 {
+    /// <summary>
+    /// Session Context Interface
+    /// </summary>
     public interface ISessionContext
     {
+        /// <summary>
+        /// A unique Id for the Session
+        /// </summary>
+        public Guid SessionId { get; }
+
         /// <summary>
         /// Fired when a command is about to execute.
         /// </summary>

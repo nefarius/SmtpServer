@@ -7,8 +7,14 @@ using SmtpServer.Storage;
 
 namespace SmtpServer.Protocol
 {
+    /// <summary>
+    /// Data Command
+    /// </summary>
     public sealed class DataCommand : SmtpCommand
     {
+        /// <summary>
+        /// Smtp Data Command
+        /// </summary>
         public const string Command = "DATA";
 
         /// <summary>
