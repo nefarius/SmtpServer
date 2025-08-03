@@ -24,6 +24,7 @@ namespace SmtpServer
                 MaxAuthenticationAttempts = 3,
                 NetworkBufferSize = 128,
                 CommandWaitTimeout = TimeSpan.FromMinutes(5),
+                CustomSmtpGreeting = null,
             };
 
             _setters.ForEach(setter => setter(serverOptions));
@@ -157,6 +158,23 @@ namespace SmtpServer
             return this;
         }
 
+        /// <summary>
+        /// Sets the custom SMTP greeting message sent to the client upon connection,
+        /// typically returned as the initial "220" response.
+        /// </summary>
+        /// <param name="smtpGreetingFunc">
+        /// A delegate that returns the greeting message to send to the client,
+        /// based on the <see cref="ISessionContext"/> (e.g., client IP, TLS state).
+        /// Example: <c>ctx => $"220 {sessionContext.ServerOptions.ServerName} ESMTP ready"</c>
+        /// </param>
+        /// <returns>An OptionsBuilder to continue building on.</returns>
+        public SmtpServerOptionsBuilder CustomGreetingMessage(Func<ISessionContext, string> smtpGreetingFunc)
+        {
+            _setters.Add(options => options.CustomSmtpGreeting = smtpGreetingFunc);
+
+            return this;
+        }
+
         #region SmtpServerOptions
 
         class SmtpServerOptions : ISmtpServerOptions
@@ -200,6 +218,13 @@ namespace SmtpServer
             /// The size of the buffer that is read from each call to the underlying network client.
             /// </summary>
             public int NetworkBufferSize { get; set; }
+
+            /// <summary>
+            /// Gets or sets the custom greeting message sent by the server in response to the initial SMTP connection.
+            /// This message is returned after the client connects and before any commands are issued (e.g., "220 mail.example.com v1.0 ESMTP ready").
+            /// If not set, a default greeting will be used.
+            /// </summary>
+            public Func<ISessionContext, string> CustomSmtpGreeting { get; set; }
         }
 
         #endregion

@@ -42,5 +42,12 @@ namespace SmtpServer
         /// The size of the buffer that is read from each call to the underlying network client.
         /// </summary>
         int NetworkBufferSize { get; }
+
+        /// <summary>
+        /// Gets the custom SMTP greeting message that the server sends immediately after a client connects,
+        /// typically as the initial "220" response. The message can be dynamically generated based on the session context.
+        /// If not set, a default greeting will be used (e.g., "220 mail.example.com ESMTP ready").
+        /// </summary>
+        Func<ISessionContext, string> CustomSmtpGreeting { get; }
     }
 }
